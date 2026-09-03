@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2027秋招 · 岗位追踪</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    // 动态注入 styles.css 并带时间戳，避免样式缓存导致旧样式覆盖新样式
+    (function () {
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'styles.css?_=' + Date.now();
+      document.getElementsByTagName('head')[0].appendChild(l);
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- ===================== 左侧菜单栏 ===================== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="logo">秋</span>
+        <div class="brand-text">
+          <h1>2027 秋招</h1>
+          <p>岗位追踪</p>
+        </div>
+      </div>
+      <nav class="side-nav" id="side-nav">
+        <button class="nav-item active" data-view="collect"><span class="nav-idx">①</span> 信息搜集</button>
+        <button class="nav-item" data-view="apps"><span class="nav-idx">②</span> 我的投递</button>
+        <button class="nav-item" data-view="dashboard"><span class="nav-idx">③</span> 秋招仪表盘</button>
+        <button class="nav-item dev" data-view="network"><span class="nav-idx">④</span> 网申填写 <span class="dev-badge">开发中</span></button>
+        <button class="nav-item dev" data-view="match"><span class="nav-idx">⑤</span> 岗位匹配 <span class="dev-badge">开发中</span></button>
+      </nav>
+      <div class="side-foot">
+        <button class="btn ghost sm" id="btn-export">导出</button>
+        <button class="btn ghost sm" id="btn-import">导入</button>
+        <input type="file" id="file-import" accept="application/json" hidden />
+      </div>
+    </aside>
+
+    <!-- ===================== 主区域 ===================== -->
+    <div class="layout-main">
+      <header class="topbar">
+        <h2 class="view-title" id="page-title">信息搜集</h2>
+        <span id="sync-info" class="sync-info">加载中…</span>
+      </header>
+
+      <main>
+        <!-- ===================== 页面1：信息搜集 ===================== -->
+        <section class="view active" id="view-collect">
+          <div class="toolbar">
+            <div class="search-box">
+              <input type="text" id="search-input" placeholder="搜索公司 / 城市 / 行业 / 岗位类别…" />
+            </div>
+            <select id="filter-type"><option value="">全部公司类型</option></select>
+            <select id="filter-category"><option value="">全部岗位类别</option></select>
+            <select id="filter-status"><option value="">全部投递状态</option></select>
+            <button class="btn ghost" id="btn-sync" title="把官方开放库里新增的公司同步进列表（按稳定 id 去重，不覆盖你已填的投递状态）">同步官方开放库</button>
+            <button class="btn ghost" id="btn-reset-status" title="把所有公司状态重置为「未浏览」（不影响你新增的公司，只重置投递状态）">重置为未浏览</button>
+            <button class="btn primary" id="btn-add">+ 新增公司</button>
+          </div>
+          <div class="table-wrap">
+            <table id="pos-table">
+              <colgroup>
+                <col style="width:10%" /><col style="width:10%" /><col style="width:7%" />
+                <col style="width:9%" /><col style="width:13%" /><col style="width:14%" />
+                <col style="width:10%" /><col style="width:6%" /><col style="width:10%" /><col style="width:11%" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>信息更新时间</th><th>公司名称</th><th>公司类型</th><th>公司行业</th>
+                  <th>工作地点</th><th>岗位类别</th><th>截止时间</th><th>投递链接</th><th>投递状态</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="pos-tbody"></tbody>
+            </table>
+            <p class="empty-hint" id="collect-empty" hidden>还没有公司数据，点「+ 新增公司」开始搜集，或导入一份 JSON。</p>
+          </div>
+          <p class="count-line" id="collect-count"></p>
+        </section>
+
+        <!-- ===================== 页面2：我的投递 ===================== -->
+        <section class="view" id="view-apps">
+          <p class="hint" style="margin-bottom:12px">点击卡片展开操作按钮：进入下一流程 / 被拒绝。面试阶段会显示当前轮次，1面→2面→3面→offer。</p>
+          <p class="empty-hint" id="apps-empty" hidden>还没有投递记录。在「信息搜集」里把公司状态改为「已投递」，即可添加具体岗位并进入看板。</p>
+          <div class="kanban-board" id="kanban-board"></div>
+        </section>
+
+        <!-- ===================== 页面3：秋招仪表盘 ===================== -->
+        <section class="view" id="view-dashboard">
+          <header class="dash-hero">
+            <div class="dash-hero-main">
+              <div class="dash-eyebrow">2027 秋招 · 作战仪表盘</div>
+              <h2 class="dash-title">你好，这是你的秋招全景</h2>
+              <p class="dash-summary" id="dash-summary">实时统计你收录的公司与投递进度。</p>
+            </div>
+            <div class="dash-hero-date" id="dash-date"></div>
+          </header>
+
+          <div class="kpi-grid" id="dash-stats"></div>
+
+          <div class="dash-grid">
+            <div class="dash-card span-2">
+              <div class="dash-card-head">
+                <h3>公司状态分布</h3>
+                <span class="dash-card-sub">收录公司按投递状态</span>
+              </div>
+              <div class="donut-wrap">
+                <div class="donut" id="dash-status"></div>
+                <ul class="donut-legend" id="dash-status-legend"></ul>
+              </div>
+            </div>
+            <div class="dash-card">
+              <div class="dash-card-head">
+                <h3>公司类型分布</h3>
+                <span class="dash-card-sub">民企 / 外企 / 央国企</span>
+              </div>
+              <div class="column-chart" id="dash-types"></div>
+            </div>
+            <div class="dash-card span-3">
+              <div class="dash-card-head">
+                <h3>投递进度</h3>
+                <span class="dash-card-sub">看板 6 阶段</span>
+              </div>
+              <div class="bars" id="dash-pipeline"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================== 页面4：网申填写（开发中） ===================== -->
+        <section class="view" id="view-network">
+          <div class="dev-view">
+            <div class="dev-icon">🚧</div>
+            <h2>网申填写</h2>
+            <p>该模块正在开发中，敬请期待。后续可把简历信息自动带入各公司网申表单，减少重复填写。</p>
+          </div>
+        </section>
+
+        <!-- ===================== 页面5：岗位匹配（开发中） ===================== -->
+        <section class="view" id="view-match">
+          <div class="dev-view">
+            <div class="dev-icon">🚧</div>
+            <h2>岗位匹配</h2>
+            <p>该模块正在开发中，敬请期待。后续可基于你的求职意向与简历，智能匹配高契合度的公司。</p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- 新增/编辑公司弹窗 -->
+  <div class="modal-mask" id="modal-mask" hidden>
+    <div class="modal">
+      <button class="modal-close" id="btn-close-x" aria-label="关闭">×</button>
+      <h2 id="modal-title">新增公司</h2>
+      <form id="pos-form">
+        <input type="hidden" id="f-id" />
+        <div class="form-grid">
+          <label>信息更新时间<input id="f-updated" type="date" /></label>
+          <label>公司名称*<input id="f-company" required placeholder="如 腾讯" /></label>
+          <label>公司类型
+            <select id="f-type"><option>民企</option><option>外企</option><option>央国企</option></select>
+          </label>
+          <label>公司行业<input id="f-industry" placeholder="如 互联网/汽车/快消" /></label>
+          <label>工作地点<input id="f-location" placeholder="如 上海/北京/深圳" /></label>
+          <label>岗位类别<input id="f-category" placeholder="如 技术/产品/运营（用 / 分隔）" /></label>
+          <label>截止时间<input id="f-deadline" type="date" /></label>
+          <label>投递链接<input id="f-url" placeholder="https://…" /></label>
+          <label>投递状态
+            <select id="f-status">
+              <option>未浏览</option><option>已投递</option><option>不投递</option>
+            </select>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn ghost" id="btn-cancel">取消</button>
+          <button type="submit" class="btn primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 添加已投递岗位弹窗 -->
+  <div class="modal-mask" id="app-modal-mask" hidden>
+    <div class="modal" style="max-width:460px">
+      <button class="modal-close" id="app-btn-close-x" aria-label="关闭">×</button>
+      <h2 id="app-modal-title">添加已投递岗位</h2>
+      <form id="app-form">
+        <label>详细岗位名称*<input id="app-position" required placeholder="如 AI产品经理" /></label>
+        <p class="hint">填写并保存后，该公司会立即出现在「我的投递 → 投递简历」中；岗位名称不能为空。可连续添加多个岗位，点「添加完成」结束。</p>
+        <div class="modal-actions">
+          <button type="button" class="btn ghost" id="app-btn-cancel">取消</button>
+          <button type="button" class="btn ghost" id="app-btn-finish">添加完成</button>
+          <button type="submit" class="btn primary">添加并继续</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script>
+    // 动态注入并带时间戳，避免浏览器缓存旧版 app.js
+    (function () {
+      var s = document.createElement('script');
+      s.src = 'app.js?_=' + Date.now();
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>
